@@ -1,0 +1,36 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "Sistema de Chat de Voz de Proximidad para Minecraft Bedrock",
+    "name": "Chat de Voz de Proximidad",
+    "uuid": "d8e8e8e8-8e8e-8e8e-8e8e-8e8e8e8e8e8e",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "description": "Scripts de Chat de Voz",
+      "type": "script",
+      "uuid": "e9f9f9f9-9f9f-9f9f-9f9f-9f9f9f9f9f9f",
+      "version": [1, 0, 0],
+      "entry": "scripts/main.js",
+      "language": "javascript"
+    },
+    {
+      "description": "Funciones de Chat de Voz",
+      "type": "data",
+      "uuid": "f0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0",
+      "version": [1, 0, 0]
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.8.0"
+    },
+    {
+      "module_name": "@minecraft/server-ui",
+      "version": "1.2.0"
+    }
+  ]
+}

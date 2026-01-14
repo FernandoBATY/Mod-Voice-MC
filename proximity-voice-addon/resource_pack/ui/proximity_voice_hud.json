@@ -1,0 +1,133 @@
+{
+  "namespace": "proximity_voice",
+  "hud_screen": {
+    "type": "screen",
+    "layer": 3,
+    "controls": [
+      {
+        "proximity_voice_container@proximity_voice.proximity_voice_container": {}
+      }
+    ]
+  },
+  "proximity_voice_container": {
+    "type": "panel",
+    "size": [
+      "100%",
+      "100%"
+    ],
+    "controls": [
+      {
+        "voice_status_panel@proximity_voice.voice_status_panel": {
+          "anchor_from": "top_right",
+          "anchor_to": "top_right",
+          "offset": [
+            -20,
+            20
+          ]
+        }
+      }
+    ]
+  },
+  "voice_status_panel": {
+    "type": "panel",
+    "size": [
+      220,
+      120
+    ],
+    "background": true,
+    "background_color": [
+      "#000000AA"
+    ],
+    "layer": 10,
+    "controls": [
+      {
+        "title_label@proximity_voice.title_label": {}
+      },
+      {
+        "mic_status_icon@proximity_voice.mic_status_icon": {
+          "offset": [
+            10,
+            25
+          ]
+        }
+      },
+      {
+        "status_text@proximity_voice.status_text": {
+          "offset": [
+            60,
+            30
+          ]
+        }
+      },
+      {
+        "connection_indicator@proximity_voice.connection_indicator": {
+          "offset": [
+            10,
+            55
+          ]
+        }
+      },
+      {
+        "range_text@proximity_voice.range_text": {
+          "offset": [
+            10,
+            75
+          ]
+        }
+      },
+      {
+        "player_count@proximity_voice.player_count": {
+          "offset": [
+            10,
+            95
+          ]
+        }
+      }
+    ]
+  },
+  "title_label": {
+    "type": "label",
+    "text": "Voz de Proximidad",
+    "color": "#00FF00FF",
+    "font_size": "small",
+    "offset": [
+      10,
+      8
+    ]
+  },
+  "mic_status_icon": {
+    "type": "image",
+    "texture": "textures/ui/proximity_voice/mic_icon",
+    "size": [
+      40,
+      40
+    ]
+  },
+  "status_text": {
+    "type": "label",
+    "text": "Listo",
+    "color": "#FFFFFFFF",
+    "font_size": "small"
+  },
+  "connection_indicator": {
+    "type": "image",
+    "texture": "textures/ui/proximity_voice/connected_indicator",
+    "size": [
+      12,
+      12
+    ],
+    "layer": 11
+  },
+  "range_text": {
+    "type": "label",
+    "text": "Rango: 30 bloques",
+    "color": "#CCCCCCFF",
+    "font_size": "small"
+  },
+  "player_count": {
+    "type": "label",
+    "text": "Jugadores: 0",
+    "color": "#CCCCCCFF",
+    "font_size": "small"
+  }
+}

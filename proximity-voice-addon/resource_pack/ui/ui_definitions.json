@@ -1,0 +1,10 @@
+{
+  "namespace": "proximity_voice",
+  "ui_defs": [
+    {
+      "namespace": "proximity_voice",
+      "layer": "hud_layer",
+      "filename": "proximity_voice_hud.json"
+    }
+  ]
+}

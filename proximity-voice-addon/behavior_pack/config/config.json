@@ -1,0 +1,29 @@
+{
+  "proximityVoice": {
+    "enabled": true,
+    "serverUrl": "ws://localhost:8080",
+    "proximityRange": 30,
+    "maxVolume": 1.0,
+    "minVolume": 0.1,
+    "volumeFalloff": 1.5,
+    "teamChat": {
+      "enabled": true,
+      "useDifferentRange": false,
+      "teamRange": 50
+    },
+    "globalChat": {
+      "enabled": false
+    },
+    "muteGlobal": false,
+    "mutePlayers": [],
+    "voiceActivation": "push-to-talk",
+    "voiceActivationThreshold": 0.3,
+    "updateInterval": 100,
+    "debugMode": false,
+    "tailscaleIntegration": {
+      "enabled": true,
+      "autoDetectIP": true,
+      "ipAddress": ""
+    }
+  }
+}

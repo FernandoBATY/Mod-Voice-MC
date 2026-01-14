@@ -1,0 +1,21 @@
+{
+  "name": "proximity-voice-chat",
+  "version": "1.0.0",
+  "description": "Proximity Voice Chat for Minecraft Bedrock",
+  "main": "main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --remote-debugging-port=9222",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "latest",
+    "electron-builder": "latest"
+  },
+  "dependencies": {
+    "ws": "^8.14.0"
+  }
+}

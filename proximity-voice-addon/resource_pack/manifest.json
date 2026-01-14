@@ -1,0 +1,30 @@
+{
+  "format_version": 2,
+  "header": {
+    "description": "Paquete de Recursos de Chat de Voz",
+    "name": "UI de Chat de Voz",
+    "uuid": "a1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "description": "Recursos UI de Chat de Voz",
+      "type": "resources",
+      "uuid": "b2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}
