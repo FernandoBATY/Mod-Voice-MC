@@ -18,8 +18,5 @@ Si alguno de ustedes quiere probarlo o modificarlo:
 4. Asegurense de que todos esten conectados a la misma red o que el servidor sea accesible.
 
 ## Notas
-- El codigo esta limpio de comentarios para que no estorbe, pero es facil de entender si saben JS basico.
-- Quite todos los emojis y cosas raras para mantenerlo simple.
-- Si algo falla, reinicien el script o el servidor, suele arreglarse.
-
+- El codigo esta limpio de comentarios para que no estorbe, pero es facil de entender si saben J
 Disfrutenlo y cualquier cosa me dicen.

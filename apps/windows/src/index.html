@@ -1,202 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html class="light" lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Proximity Voice Chat</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+    <!-- Tailwind and User Styles -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+            extend: {
+                colors: {
+                "primary": "#5c6bc0","background-light": "#fafbfc",
+                "background-dark": "#0f172a",
+                },
+                fontFamily: {
+                "display": ["Space Grotesk"]
+                },
+                borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+            },
         }
-
+    </script>
+    <style type="text/tailwindcss">
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: 'Space Grotesk', sans-serif;
         }
-
-        .container {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
         }
-
-        #login-screen {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+        input::placeholder {
+            color: #94a3b8;
+            font-weight: 300;
         }
+    </style>
 
+    <!-- Legacy Styles for Voice Screen (Preserved functionality) -->
+    <style>
+        /* Adaptations for Voice Screen using Tailwind utilities where possible, but keeping custom classes for logic structure */
         #voice-screen {
-            flex: 1;
-            display: none;
+            display: none; /* Hidden by default */
             flex-direction: column;
-        }
-
-        .login-box {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
+            height: 100vh;
             width: 100%;
-        }
-
-        .login-box h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .login-box p {
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            color: #333;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f172a; /* Match background-dark */
             color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
         }
 
-        .login-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .login-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .error-message {
-            background: #fee;
-            border: 1px solid #fcc;
-            color: #c33;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        /* Voice Chat Screen */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #1e293b;
             padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid #334155;
         }
 
         .header h1 {
-            font-size: 24px;
+            font-size: 20px;
+            font-weight: 600;
         }
 
         .connection-status {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 16px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
             font-size: 14px;
         }
 
         .status-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: #4ade80;
-            animation: pulse 2s infinite;
         }
-
-        .status-indicator.disconnected {
-            background: #f87171;
-            animation: none;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+        .status-indicator.disconnected { background: #f87171; }
 
         .content {
             flex: 1;
+            padding: 24px;
             overflow-y: auto;
-            padding: 20px;
-        }
-
-        .nearby-players {
-            margin-bottom: 30px;
         }
 
         .nearby-players h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 18px;
+            color: #94a3b8;
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
         }
 
         .player-card {
-            background: white;
+            background: #1e293b;
             border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            gap: 16px;
+            border: 1px solid #334155;
         }
 
         .player-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #5c6bc0;
             color: white;
             display: flex;
             justify-content: center;
@@ -204,177 +120,157 @@
             font-weight: bold;
         }
 
-        .player-info {
-            flex: 1;
-        }
-
-        .player-name {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 4px;
-        }
-
-        .player-distance {
-            font-size: 12px;
-            color: #999;
-        }
+        .player-info { flex: 1; }
+        .player-name { font-weight: 600; color: white; }
+        .player-distance { font-size: 13px; color: #94a3b8; }
 
         .controls {
-            background: white;
+            background: #1e293b;
             padding: 24px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid #334155;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
 
-        .sensitivity-control {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .sensitivity-control label {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .sensitivity-control input[type="range"] {
-            width: 100%;
-        }
-
-        .button-row {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
         .voice-button {
-            flex: 1;
             padding: 16px;
-            border: none;
             border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
+            background: #334155;
+            color: white;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 8px;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            width: 100%;
         }
+        .voice-button:hover { background: #475569; }
+        .voice-button.mute-btn { background: #5c6bc0; }
+        .voice-button.mute-btn.muted { background: #ef4444; }
+        .voice-button.active { background: #f59e0b; }
 
-        .mute-btn {
-            background: #4ade80;
-            color: white;
+        .error-message {
+            color: #ef4444;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.875rem;
+            display: none;
         }
-
-        .mute-btn.muted {
-            background: #f87171;
-        }
-
-        .voice-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .voice-button.active {
-            background: #f59e0b;
-            animation: pulse 1s infinite;
-        }
-
-        .icon {
-            font-size: 24px;
-        }
-
-        .label {
-            font-size: 12px;
-        }
+        .error-message.show { display: block; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <!-- Login Screen -->
-        <div id="login-screen">
-            <div class="login-box">
-                <h1>🎤 Proximity Voice Chat</h1>
-                <p>Minecraft Bedrock Edition</p>
-                
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center transition-colors duration-300">
+
+    <!-- LOGIN SCREEN (User Design) -->
+    <!-- Added id="login-screen" for JS logic -->
+    <div id="login-screen" class="layout-container w-full max-w-[1440px] flex flex-col items-center justify-center px-4">
+        <div class="w-full max-w-[440px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-10 md:p-14 shadow-sm transition-all">
+            <div class="flex flex-col items-center mb-12">
+                <div class="mb-6 flex items-center justify-center size-16 rounded-full bg-primary/5 text-primary">
+                    <span class="material-symbols-outlined text-4xl">mic</span>
+                </div>
+                <h1 class="text-slate-900 dark:text-white text-2xl font-semibold tracking-tight text-center">
+                    🎤 Chat de Voz de Proximidad
+                </h1>
+                <p class="text-slate-400 dark:text-slate-500 text-sm font-normal leading-normal mt-3 text-center">
+                    Minecraft Bedrock Edition
+                </p>
+                <!-- Error Message Integration -->
                 <div class="error-message" id="error-message"></div>
+            </div>
 
-                <form id="login-form">
-                    <div class="form-group">
-                        <label for="player-name">Player Name</label>
-                        <input
-                            type="text"
-                            id="player-name"
-                            placeholder="Enter your player name"
-                            required
-                        />
+            <!-- Form with IDs injected -->
+            <form class="space-y-7" id="login-form">
+                <div class="flex flex-col gap-2">
+                    <label class="text-slate-600 dark:text-slate-400 text-sm font-medium leading-normal pl-1">
+                        Nombre del Jugador
+                    </label>
+                    <div class="relative">
+                        <input id="player-name" required class="form-input flex w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 focus:border-primary h-14 px-5 text-base font-normal transition-all" placeholder="Ingresa tu nombre de jugador" type="text"/>
                     </div>
-
-                    <div class="form-group">
-                        <label for="server-url">Server URL</label>
-                        <input
-                            type="text"
-                            id="server-url"
-                            placeholder="ws://localhost:8080"
-                            value="ws://localhost:8080"
-                            required
-                        />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-slate-600 dark:text-slate-400 text-sm font-medium leading-normal pl-1">
+                        URL del Servidor
+                    </label>
+                    <div class="relative">
+                        <input id="server-url" value="ws://localhost:8080" required class="form-input flex w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 focus:border-primary h-14 px-5 text-base font-normal transition-all" placeholder="voz.servidor.com:port" type="text"/>
                     </div>
-
-                    <button type="submit" class="login-btn" id="login-btn">
-                        Connect
+                </div>
+                <div class="pt-2">
+                    <button id="login-btn" type="submit" class="w-full h-14 flex items-center justify-center gap-2 rounded-xl bg-primary hover:bg-indigo-700 text-white text-base font-medium tracking-wide transition-all shadow-lg shadow-primary/10 active:scale-[0.98]">
+                        Conectar
+                        <span class="material-symbols-outlined text-xl">arrow_forward</span>
                     </button>
-                </form>
+                </div>
+            </form>
+
+            <div class="mt-10 pt-8 border-t border-slate-5 ph-8 dark:border-slate-800 flex justify-between items-center">
+                <button class="text-slate-400 dark:text-slate-500 hover:text-primary dark:hover:text-primary text-xs font-medium transition-colors">
+                    ¿Necesitas ayuda?
+                </button>
+                <div class="flex items-center gap-2">
+                    <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                    <span class="text-slate-400 dark:text-slate-500 text-[10px] uppercase tracking-[0.15em] font-bold">Servicios Activos</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Background Elements from User Design -->
+        <div class="fixed top-0 left-0 w-full px-10 py-8 flex justify-between items-center pointer-events-none">
+            <div class="flex items-center gap-3 pointer-events-auto opacity-30 hover:opacity-100 transition-opacity">
+                <div class="size-8 text-slate-900 dark:text-white">
+                    <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.8261 30.5736C16.7203 29.8826 20.2244 29.4783 24 29.4783C27.7756 29.4783 31.2797 29.8826 34.1739 30.5736C36.9144 31.2278 39.9967 32.7669 41.3563 33.8352L24.8486 7.36089C24.4571 6.73303 23.5429 6.73303 23.1514 7.36089L6.64374 33.8352C8.00331 32.7669 11.0856 31.2278 13.8261 30.5736Z" fill="currentColor"></path>
+                        <path clip-rule="evenodd" d="M39.998 35.764C39.9944 35.7463 39.9875 35.7155 39.9748 35.6706C39.9436 35.5601 39.8949 35.4259 39.8346 35.2825C39.8168 35.2403 39.7989 35.1993 39.7813 35.1602C38.5103 34.2887 35.9788 33.0607 33.7095 32.5189C30.9875 31.8691 27.6413 31.4783 24 31.4783C20.3587 31.4783 17.0125 31.8691 14.2905 32.5189C12.0012 33.0654 9.44505 34.3104 8.18538 35.1832C8.17384 35.2075 8.16216 35.233 8.15052 35.2592C8.09919 35.3751 8.05721 35.4886 8.02977 35.589C8.00356 35.6848 8.00039 35.7333 8.00004 35.7388C8.00004 35.739 8 35.7393 8.00004 35.7388C8.00004 35.7641 8.0104 36.0767 8.68485 36.6314C9.34546 37.1746 10.4222 37.7531 11.9291 38.2772C14.9242 39.319 19.1919 40 24 40C28.8081 40 33.0758 39.319 36.0709 38.2772C37.5778 37.7531 38.6545 37.1746 39.3151 36.6314C39.9006 36.1499 39.9857 35.8511 39.998 35.764ZM4.95178 32.7688L21.4543 6.30267C22.6288 4.4191 25.3712 4.41909 26.5457 6.30267L43.0534 32.777C43.0709 32.8052 43.0878 32.8338 43.104 32.8629L41.3563 33.8352C43.104 32.8629 43.1038 32.8626 43.104 32.8629L43.1051 32.865L43.1065 32.8675L43.1101 32.8739L43.1199 32.8918C43.1276 32.906 43.1377 32.9246 43.1497 32.9473C43.1738 32.9925 43.2062 33.0545 43.244 33.1299C43.319 33.2792 43.4196 33.489 43.5217 33.7317C43.6901 34.1321 44 34.9311 44 35.7391C44 37.4427 43.003 38.7775 41.8558 39.7209C40.6947 40.6757 39.1354 41.4464 37.385 42.0552C33.8654 43.2794 29.133 44 24 44C18.867 44 14.1346 43.2794 10.615 42.0552C8.86463 41.4464 7.30529 40.6757 6.14419 39.7209C4.99695 38.7775 3.99999 37.4427 3.99999 35.7391C3.99999 34.8725 4.29264 34.0922 4.49321 33.6393C4.60375 33.3898 4.71348 33.1804 4.79687 33.0311C4.83898 32.9556 4.87547 32.8935 4.9035 32.8471C4.91754 32.8238 4.92954 32.8043 4.93916 32.7889L4.94662 32.777L4.95178 32.7688ZM35.9868 29.004L24 9.77997L12.0131 29.004C12.4661 28.8609 12.9179 28.7342 13.3617 28.6282C16.4281 27.8961 20.0901 27.4783 24 27.4783C27.9099 27.4783 31.5719 27.8961 34.6383 28.6282C35.082 28.7342 35.5339 28.8609 35.9868 29.004Z" fill="currentColor" fill-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <span class="text-slate-900 dark:text-white text-xs font-bold tracking-widest">PROXIMITY</span>
+            </div>
+            <div class="flex items-center gap-4 pointer-events-auto">
+                <button class="size-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 text-slate-400 dark:text-white transition-all hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <span class="material-symbols-outlined text-lg">settings</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VOICE CHAT SCREEN (Functional Back-end UI from previous version, adapted styles) -->
+    <div id="voice-screen">
+        <div class="header">
+            <h1>Chat Activo</h1>
+            <div class="connection-status">
+                <div class="status-indicator" id="status-indicator"></div>
+                <span id="status-text">Conectado</span>
+                <span id="player-count">(0)</span>
             </div>
         </div>
 
-        <!-- Voice Chat Screen -->
-        <div id="voice-screen">
-            <!-- Header -->
-            <div class="header">
-                <h1>Proximity Voice Chat</h1>
-                <div class="connection-status">
-                    <div class="status-indicator" id="status-indicator"></div>
-                    <span id="status-text">Connected</span>
-                    <span id="player-count">(1)</span>
+        <div class="content">
+            <div class="nearby-players">
+                <h2>Jugadores Cercanos</h2>
+                <div id="players-list">
+                    <!-- Cards will be injected here -->
                 </div>
             </div>
+        </div>
 
-            <!-- Content -->
-            <div class="content">
-                <div class="nearby-players">
-                    <h2>Nearby Players</h2>
-                    <div id="players-list"></div>
-                </div>
+        <div class="controls">
+            <div class="w-full">
+                <label for="sensitivity" class="text-sm text-slate-400 mb-2 block">Sensibilidad del Micrófono</label>
+                <input type="range" id="sensitivity" min="0" max="1" step="0.1" value="0.5" class="w-full">
             </div>
 
-            <!-- Controls -->
-            <div class="controls">
-                <div class="sensitivity-control">
-                    <label for="sensitivity">Microphone Sensitivity</label>
-                    <input
-                        type="range"
-                        id="sensitivity"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value="0.5"
-                    />
-                </div>
-
-                <div class="button-row">
-                    <button class="voice-button mute-btn" id="mute-btn">
-                        <span class="icon">🎤</span>
-                        <span class="label">Unmuted</span>
-                    </button>
-                    <button class="voice-button" id="ptt-btn" style="background: #3b82f6; color: white;">
-                        <span class="icon">📢</span>
-                        <span class="label">Push to Talk</span>
-                    </button>
-                </div>
+            <div class="flex gap-4">
+                <button class="voice-button mute-btn" id="mute-btn">
+                    <span class="material-symbols-outlined text-2xl mb-1 icon">mic</span>
+                    <span class="text-sm font-medium label">Mutear</span>
+                </button>
+                <button class="voice-button" id="ptt-btn">
+                    <span class="material-symbols-outlined text-2xl mb-1 icon">record_voice_over</span>
+                    <span class="text-sm font-medium label">Push to Talk</span>
+                </button>
             </div>
         </div>
     </div>
