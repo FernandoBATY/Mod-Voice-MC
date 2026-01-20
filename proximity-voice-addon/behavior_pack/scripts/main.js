@@ -21,6 +21,7 @@ class PlayerVoiceState {
         this.name = player.name;
         this.position = player.location;
         this.rotation = { pitch: player.getRotation().x, yaw: player.getRotation().y };
+        this.dimension = player.dimension.id; // ⭐ Capturar dimensión (overworld, nether, the_end)
         this.isSpeaking = false;
         this.teamId = this.getTeamId();
         this.isMuted = false;
@@ -37,6 +38,7 @@ class PlayerVoiceState {
         try {
             this.position = this.player.location;
             this.rotation = { pitch: this.player.getRotation().x, yaw: this.player.getRotation().y };
+            this.dimension = this.player.dimension.id; // ⭐ Actualizar dimensión cada tick
             this.lastUpdate = Date.now();
         } catch (e) {
             console.warn(`Error al actualizar posicion para ${this.name}:`, e);
@@ -119,6 +121,7 @@ function sendPlayerStateToServer(voiceState, eventType = 'update') {
             name: voiceState.name,
             position: voiceState.position,
             rotation: voiceState.rotation,
+            dimension: voiceState.dimension, // ⭐ Enviar dimensión al servidor
             teamId: voiceState.teamId,
             isSpeaking: voiceState.isSpeaking
         },

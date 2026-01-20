@@ -80,6 +80,9 @@ class PlayerSession {
         if (this.muteList.has(speaker.uuid)) return false;
         if (speaker.muteList.has(this.uuid)) return false;
 
+        // ⭐ IMPORTANTE: Verificar que están en la MISMA DIMENSIÓN (mundo)
+        if (this.dimension !== speaker.dimension) return false;
+
         const distance = this.getDistanceTo(speaker);
         if (distance <= config.proximityRange) return true;
 
@@ -273,7 +276,8 @@ function broadcastPlayerUpdate(uuid) {
             position: player.position,
             rotation: player.rotation,
             isSpeaking: player.isSpeaking,
-            teamId: player.teamId
+            teamId: player.teamId,
+            dimension: player.dimension
         }
     };
 
@@ -400,6 +404,10 @@ function handlePlayerUpdate(playerData) {
         player.updatePosition(playerData.position.x, playerData.position.y, playerData.position.z);
         player.updateRotation(playerData.rotation.pitch, playerData.rotation.yaw);
         player.teamId = playerData.teamId || null;
+        // Actualizar dimensión si viene en los datos
+        if (playerData.dimension) {
+            player.dimension = playerData.dimension;
+        }
 
         broadcastPlayerUpdate(playerData.uuid);
     }

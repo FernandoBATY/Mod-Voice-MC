@@ -1,19 +1,66 @@
-# Dependencies
+# Dependencies (Node/Electron/Server)
 node_modules/
+*.tsbuildinfo
+.cache/
 
-# Production
-build/
-dist/
-
-# System Files
-.DS_Store
-Thumbs.db
+# Logs
+logs/
 *.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Builds / Output
+dist/
+build/
+out/
+tmp/
+temp/
+coverage/
+.nyc_output/
+
+# Electron packaging artifacts
+release/
+*.asar
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.snap
+*.nupkg
+
+# Flutter / Mobile
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+android/.gradle/
+android/app/build/
+android/local.properties
+ios/Pods/
+build/ # (Flutter adds per-project build dirs)
+*.apk
+*.aab
 
 # Environment variables
 .env
 .env.local
+.env.*
+!.env.example
 
-# IDEs
+# IDE / Editor
 .vscode/
 .idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Minecraft export artifacts (optional)
+*.mcaddon
+*.mcpack
+export/
