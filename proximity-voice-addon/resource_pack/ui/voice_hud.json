@@ -1,0 +1,303 @@
+{
+  "namespace": "proximity_voice",
+  
+  "hud_screen": {
+    "type": "panel",
+    "controls": [
+      {
+        "main_hud": {
+          "type": "panel",
+          "anchor_from": "top_left",
+          "anchor_to": "top_left",
+          "size": ["100%", "100%"],
+          "layer": 1,
+          "controls": [
+            {
+              "voice_status_panel@proximity_voice.voice_status_panel": {}
+            },
+            {
+              "nearby_players_panel@proximity_voice.nearby_players_panel": {}
+            },
+            {
+              "speaking_indicator@proximity_voice.speaking_indicator": {}
+            }
+          ]
+        }
+      }
+    ]
+  },
+  
+  "voice_status_panel": {
+    "type": "panel",
+    "anchor_from": "top_right",
+    "anchor_to": "top_right",
+    "offset": [-10, 10],
+    "size": [200, 80],
+    "controls": [
+      {
+        "background": {
+          "type": "image",
+          "texture": "textures/ui/voice_bg",
+          "size": ["100%", "100%"],
+          "alpha": 0.8
+        }
+      },
+      {
+        "connection_status": {
+          "type": "panel",
+          "size": ["100%", 30],
+          "controls": [
+            {
+              "icon": {
+                "type": "image",
+                "texture": "textures/ui/microphone_icon",
+                "size": [20, 20],
+                "offset": [10, 5]
+              }
+            },
+            {
+              "status_text": {
+                "type": "label",
+                "text": "Conectado",
+                "color": [0.3, 1.0, 0.3],
+                "offset": [40, 8],
+                "layer": 2,
+                "font_size": "normal",
+                "font_type": "smooth"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "mic_level": {
+          "type": "panel",
+          "offset": [10, 35],
+          "size": [180, 20],
+          "controls": [
+            {
+              "level_bar_bg": {
+                "type": "image",
+                "texture": "textures/ui/white",
+                "color": [0.2, 0.2, 0.2],
+                "size": ["100%", "100%"]
+              }
+            },
+            {
+              "level_bar": {
+                "type": "image",
+                "texture": "textures/ui/white",
+                "color": [0.3, 0.8, 1.0],
+                "size": ["#level_percentage", "100%"],
+                "bindings": [
+                  {
+                    "binding_name": "#mic_level",
+                    "binding_name_override": "#size",
+                    "binding_type": "global"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "player_count": {
+          "type": "label",
+          "text": "#player_count_text",
+          "color": [0.8, 0.8, 0.8],
+          "offset": [10, 58],
+          "layer": 2,
+          "font_size": "small",
+          "bindings": [
+            {
+              "binding_name": "#player_count",
+              "binding_name_override": "#text",
+              "binding_type": "global"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  
+  "nearby_players_panel": {
+    "type": "panel",
+    "anchor_from": "top_right",
+    "anchor_to": "top_right",
+    "offset": [-10, 100],
+    "size": [200, 300],
+    "controls": [
+      {
+        "title": {
+          "type": "label",
+          "text": "Jugadores Cercanos",
+          "color": [0.7, 0.7, 0.7],
+          "offset": [10, 5],
+          "font_size": "small",
+          "font_type": "smooth"
+        }
+      },
+      {
+        "players_list": {
+          "type": "stack_panel",
+          "orientation": "vertical",
+          "offset": [5, 25],
+          "size": ["100% - 10px", "100% - 30px"],
+          "factory": {
+            "name": "nearby_player_factory",
+            "control_ids": {
+              "player_entry": "proximity_voice.player_entry"
+            }
+          },
+          "collection_name": "nearby_players",
+          "bindings": [
+            {
+              "binding_name": "#nearby_players_collection",
+              "binding_name_override": "#collection",
+              "binding_type": "collection",
+              "binding_collection_name": "nearby_players"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  
+  "player_entry": {
+    "type": "panel",
+    "size": ["100%", 40],
+    "controls": [
+      {
+        "background": {
+          "type": "image",
+          "texture": "textures/ui/white",
+          "color": [0.1, 0.1, 0.1],
+          "alpha": 0.6,
+          "size": ["100% - 4px", "100% - 2px"],
+          "offset": [2, 1]
+        }
+      },
+      {
+        "player_name": {
+          "type": "label",
+          "text": "#player_name",
+          "color": [1.0, 1.0, 1.0],
+          "offset": [10, 5],
+          "font_size": "normal",
+          "bindings": [
+            {
+              "binding_name": "#player_name",
+              "binding_name_override": "#text",
+              "binding_type": "collection",
+              "binding_collection_name": "nearby_players"
+            }
+          ]
+        }
+      },
+      {
+        "distance_text": {
+          "type": "label",
+          "text": "#distance_text",
+          "color": [0.6, 0.8, 1.0],
+          "offset": [10, 20],
+          "font_size": "small",
+          "bindings": [
+            {
+              "binding_name": "#distance",
+              "binding_name_override": "#text",
+              "binding_type": "collection",
+              "binding_collection_name": "nearby_players"
+            }
+          ]
+        }
+      },
+      {
+        "speaking_icon": {
+          "type": "image",
+          "texture": "textures/ui/speaker_icon",
+          "size": [16, 16],
+          "offset": [170, 12],
+          "visible": "#is_speaking",
+          "bindings": [
+            {
+              "binding_name": "#is_speaking",
+              "binding_name_override": "#visible",
+              "binding_type": "collection",
+              "binding_collection_name": "nearby_players"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  
+  "speaking_indicator": {
+    "type": "panel",
+    "anchor_from": "center",
+    "anchor_to": "center",
+    "offset": [0, -120],
+    "size": [300, 50],
+    "visible": "#is_self_speaking",
+    "controls": [
+      {
+        "background": {
+          "type": "image",
+          "texture": "textures/ui/white",
+          "color": [1.0, 0.3, 0.3],
+          "alpha": 0.8,
+          "size": ["100%", "100%"]
+        }
+      },
+      {
+        "icon": {
+          "type": "image",
+          "texture": "textures/ui/microphone_active",
+          "size": [30, 30],
+          "offset": [10, 10]
+        }
+      },
+      {
+        "text": {
+          "type": "label",
+          "text": "HABLANDO...",
+          "color": [1.0, 1.0, 1.0],
+          "offset": [50, 15],
+          "font_size": "large",
+          "font_type": "smooth"
+        }
+      },
+      {
+        "pulse_animation": {
+          "type": "panel",
+          "size": ["100%", "100%"],
+          "controls": [
+            {
+              "pulse": {
+                "type": "image",
+                "texture": "textures/ui/white",
+                "color": [1.0, 0.5, 0.5],
+                "alpha": "#pulse_alpha",
+                "size": ["100%", "100%"],
+                "bindings": [
+                  {
+                    "binding_name": "#pulse_alpha",
+                    "binding_name_override": "#alpha",
+                    "binding_type": "global"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "binding_name": "#is_speaking",
+        "binding_name_override": "#visible",
+        "binding_type": "global"
+      }
+    ]
+  }
+}

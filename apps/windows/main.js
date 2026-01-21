@@ -108,6 +108,15 @@ function handleServerMessage(message) {
         case 'audio_start':
             mainWindow?.webContents.send('audio-start', message);
             break;
+        case 'audio_chunk':
+            // Forward audio chunk to renderer with volume/pan
+            mainWindow?.webContents.send('audio-chunk', {
+                uuid: message.uuid,
+                audioData: message.audioData,
+                volume: message.volume || 1.0,
+                pan: message.pan || 0
+            });
+            break;
         case 'audio_stop':
             mainWindow?.webContents.send('audio-stop', message);
             break;
@@ -169,6 +178,18 @@ ipcMain.handle('stop-speaking', async (event) => {
 ipcMain.handle('set-sensitivity', async (event, sensitivity) => {
     voiceState.sensitivity = sensitivity;
     return true;
+});
+
+ipcMain.on('send-audio-chunk', (event, audioData) => {
+    if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+            type: 'audio_chunk',
+            player: { uuid: generateUUID(voiceState.playerName) },
+            audioData: Array.from(audioData.data),
+            timestamp: audioData.timestamp,
+            sampleRate: audioData.sampleRate
+        }));
+    }
 });
 
 ipcMain.handle('disconnect', async (event) => {

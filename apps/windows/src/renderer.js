@@ -1,11 +1,12 @@
-// Renderer process - UI logic
+// Renderer process - UI logic with WebRTC Audio
 let currentVoiceState = {
     isConnected: false,
     isMuted: false,
     isSpeaking: false,
     playerName: '',
     playerCount: 1,
-    nearbyPlayers: []
+    nearbyPlayers: [],
+    audioInitialized: false
 };
 
 // ============================================
@@ -37,6 +38,10 @@ loginForm.addEventListener('submit', async (e) => {
         
         if (result.success) {
             currentVoiceState.playerName = playerName;
+            
+            // Save connection info
+            saveConnectionInfo(serverUrl, playerName);
+            
             showVoiceScreen();
         } else {
             showError(`Connection failed: ${result.error}`);
@@ -76,6 +81,9 @@ function showVoiceScreen() {
     loginScreen.style.display = 'none';
     voiceScreen.style.display = 'flex';
     updateConnectionStatus(true);
+    
+    // Initialize audio system
+    initializeAudio();
 }
 
 function showLoginScreen() {
@@ -94,15 +102,25 @@ muteBtn.addEventListener('click', async () => {
 });
 
 pttBtn.addEventListener('mousedown', async () => {
+    if (!currentVoiceState.audioInitialized) return;
+    
     currentVoiceState.isSpeaking = true;
     await window.api.startSpeaking();
     updatePTTButton();
+    
+    // Start capturing and sending audio
+    window.audioManager.startRecording((audioData) => {
+        window.api.sendAudioChunk(audioData);
+    });
 });
 
 pttBtn.addEventListener('mouseup', async () => {
     currentVoiceState.isSpeaking = false;
     await window.api.stopSpeaking();
     updatePTTButton();
+    
+    // Stop audio recording
+    window.audioManager.stopRecording();
 });
 
 pttBtn.addEventListener('mouseleave', async () => {
@@ -110,6 +128,9 @@ pttBtn.addEventListener('mouseleave', async () => {
         currentVoiceState.isSpeaking = false;
         await window.api.stopSpeaking();
         updatePTTButton();
+        
+        // Stop audio recording
+        window.audioManager.stopRecording();
     }
 });
 
@@ -200,6 +221,9 @@ window.api.onPlayerEvent((data) => {
         });
         updatePlayerCount();
         updatePlayersList();
+        
+        // Show notification
+        window.notifications.playerJoined(eventData.name);
     } else if (event === 'player_leave') {
         currentVoiceState.playerCount--;
         currentVoiceState.nearbyPlayers = currentVoiceState.nearbyPlayers.filter(
@@ -207,6 +231,9 @@ window.api.onPlayerEvent((data) => {
         );
         updatePlayerCount();
         updatePlayersList();
+        
+        // Show notification
+        window.notifications.playerLeft(eventData.name);
     }
 });
 
@@ -229,6 +256,7 @@ window.api.onPlayerUpdate((data) => {
 window.api.onConnectionError((error) => {
     showError(`Connection error: ${error}`);
     updateConnectionStatus(false);
+    window.notifications.connectionError(error);
 });
 
 window.api.onDisconnected(() => {
@@ -236,10 +264,112 @@ window.api.onDisconnected(() => {
     showLoginScreen();
 });
 
+// Audio event listeners
+window.api.onAudioStart((data) => {
+    console.log('[Audio] Speaker started:', data.uuid);
+    // Prepare audio player for this speaker
+});
+
+window.api.onAudioChunk((data) => {
+    const { uuid, audioData, volume, pan } = data;
+    
+    // Play audio chunk with 3D positioning
+    window.audioManager.playAudioChunk(uuid, audioData, volume || 1.0, pan || 0);
+});
+
+window.api.onAudioStop((data) => {
+    console.log('[Audio] Speaker stopped:', data.uuid);
+    window.audioManager.stopSpeaker(data.uuid);
+});
+
 // ============================================
 // INITIALIZATION
 // ============================================
 
+async function initializeAudio() {
+    if (currentVoiceState.audioInitialized) return;
+    
+    try {
+        console.log('[App] Initializing audio system...');
+        
+        const initialized = await window.audioManager.initialize();
+        if (!initialized) {
+            showError('Failed to initialize audio system');
+            return;
+        }
+        
+        const micAccess = await window.audioManager.getMicrophoneAccess();
+        if (!micAccess) {
+            showError('Microphone access denied. Please allow microphone permissions.');
+            return;
+        }
+        
+        currentVoiceState.audioInitialized = true;
+        console.log('[App] Audio system ready');
+        
+        // Start microphone level monitoring
+        startMicrophoneLevelMonitoring();
+    } catch (error) {
+        console.error('[App] Audio initialization failed:', error);
+        showError('Audio initialization failed: ' + error.message);
+    }
+}
+
+function startMicrophoneLevelMonitoring() {
+    setInterval(() => {
+        const level = window.audioManager.getMicrophoneLevel();
+        updateMicrophoneLevel(level);
+    }, 50);
+}
+
+function updateMicrophoneLevel(level) {
+    // Update UI with microphone level
+    const micIcon = document.querySelector('#mute-btn .icon');
+    if (micIcon && !currentVoiceState.isMuted) {
+        const intensity = Math.min(1, level * 10);
+        micIcon.style.opacity = 0.5 + (intensity * 0.5);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('App loaded');
+    
+    // Load saved preferences
+    loadSavedPreferences();
+    
+    // Load server history
+    populateServerHistory();
 });
+
+function loadSavedPreferences() {
+    const prefs = window.ConfigStorage.loadUserPreferences();
+    const lastConnection = window.ConfigStorage.getLastConnection();
+    
+    // Apply preferences
+    if (sensitivitySlider) {
+        sensitivitySlider.value = prefs.sensitivity;
+    }
+    
+    // Auto-fill last connection
+    if (playerNameInput && lastConnection.username) {
+        playerNameInput.value = lastConnection.username;
+    }
+    if (serverUrlInput && lastConnection.serverUrl) {
+        serverUrlInput.value = lastConnection.serverUrl;
+    }
+    
+    console.log('[App] Preferences loaded:', prefs);
+}
+
+function populateServerHistory() {
+    const history = window.ConfigStorage.getServerHistory();
+    if (history.length > 0) {
+        console.log('[App] Server history:', history.length, 'entries');
+        // Could add UI dropdown for quick server selection
+    }
+}
+
+function saveConnectionInfo(serverUrl, username) {
+    window.ConfigStorage.saveLastConnection(serverUrl, username);
+    window.ConfigStorage.addServerToHistory(serverUrl, username);
+}

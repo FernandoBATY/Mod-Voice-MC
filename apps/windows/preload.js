@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('api', {
     disconnect: () =>
         ipcRenderer.invoke('disconnect'),
     
+    sendAudioChunk: (audioData) =>
+        ipcRenderer.send('send-audio-chunk', audioData),
+    
     // Event listeners
     onJoinConfirm: (callback) =>
         ipcRenderer.on('join-confirm', (event, data) => callback(data)),
@@ -35,4 +38,13 @@ contextBridge.exposeInMainWorld('api', {
     
     onDisconnected: (callback) =>
         ipcRenderer.on('disconnected', () => callback()),
+    
+    onAudioStart: (callback) =>
+        ipcRenderer.on('audio-start', (event, data) => callback(data)),
+    
+    onAudioChunk: (callback) =>
+        ipcRenderer.on('audio-chunk', (event, data) => callback(data)),
+    
+    onAudioStop: (callback) =>
+        ipcRenderer.on('audio-stop', (event, data) => callback(data)),
 });

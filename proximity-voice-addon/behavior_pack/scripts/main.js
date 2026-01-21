@@ -13,6 +13,13 @@ const CONFIG = {
 
 const playerData = new Map();
 const activePlayers = new Set();
+const hudData = {
+    isConnected: false,
+    isSpeaking: false,
+    micLevel: 0,
+    playerCount: 0,
+    nearbyPlayers: []
+};
 
 class PlayerVoiceState {
     constructor(player) {
@@ -266,7 +273,53 @@ system.runInterval(() => {
     if (updateCounter % 100 === 0 && CONFIG.debugMode) {
         console.log(`[Chat de Voz] Jugadores activos: ${playerData.size}`);
     }
+    
+    // Update HUD data for all players
+    updateHUDForAllPlayers();
 }, CONFIG.updateInterval);
+
+function updateHUDForAllPlayers() {
+    world.getAllPlayers().forEach(player => {
+        const voiceState = playerData.get(player.id);
+        if (!voiceState) return;
+        
+        // Build nearby players list
+        const nearbyList = [];
+        playerData.forEach((otherState, otherUuid) => {
+            if (otherUuid !== player.id && voiceState.canHearPlayer(otherState)) {
+                const distance = voiceState.getDistanceToPlayer(otherState);
+                nearbyList.push({
+                    name: otherState.name,
+                    distance: Math.round(distance),
+                    isSpeaking: otherState.isSpeaking,
+                    volume: voiceState.calculateVolumeForSpeaker(otherState)
+                });
+            }
+        });
+        
+        // Sort by distance
+        nearbyList.sort((a, b) => a.distance - b.distance);
+        
+        // Update HUD data
+        hudData.playerCount = playerData.size;
+        hudData.nearbyPlayers = nearbyList;
+        hudData.isSpeaking = voiceState.isSpeaking;
+        hudData.isConnected = CONFIG.serverUrl && CONFIG.serverUrl.length > 0;
+        
+        // Display HUD to player (using actionbar for now)
+        if (nearbyList.length > 0) {
+            const nearbyNames = nearbyList.slice(0, 3).map(p => 
+                `${p.isSpeaking ? '🔊' : ''}${p.name} (${p.distance}m)`
+            ).join(', ');
+            
+            player.onScreenDisplay.setActionBar(
+                `§b[Voz]§r ${nearbyNames}${nearbyList.length > 3 ? ` +${nearbyList.length - 3} más` : ''}`
+            );
+        } else if (voiceState.isSpeaking) {
+            player.onScreenDisplay.setActionBar('§c🎤 HABLANDO...§r');
+        }
+    });
+}
 
 system.run(() => {
     registerCommands();
