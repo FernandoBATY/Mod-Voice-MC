@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('api', {
     sendAudioChunk: (audioData) =>
         ipcRenderer.send('send-audio-chunk', audioData),
     
+    reportLatency: (latency) =>
+        ipcRenderer.send('report-latency', latency),
+    
     // Event listeners
     onJoinConfirm: (callback) =>
         ipcRenderer.on('join-confirm', (event, data) => callback(data)),
@@ -47,4 +50,14 @@ contextBridge.exposeInMainWorld('api', {
     
     onAudioStop: (callback) =>
         ipcRenderer.on('audio-stop', (event, data) => callback(data)),
+    
+    // Reconnection events
+    onReconnecting: (callback) =>
+        ipcRenderer.on('reconnecting', (event, data) => callback(data)),
+    
+    onReconnected: (callback) =>
+        ipcRenderer.on('reconnected', () => callback()),
+    
+    onReconnectFailed: (callback) =>
+        ipcRenderer.on('reconnect-failed', () => callback()),
 });

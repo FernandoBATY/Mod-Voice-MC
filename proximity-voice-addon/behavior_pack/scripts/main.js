@@ -13,12 +13,23 @@ const CONFIG = {
 
 const playerData = new Map();
 const activePlayers = new Set();
+
+// Sistema de código temporal de vinculación
+let linkingCodeState = {
+    code: null,
+    generatedTime: null,
+    expiresAt: null,
+    isShown: true,
+    showDuration: 120000 // 2 minutos
+};
+
 const hudData = {
     isConnected: false,
     isSpeaking: false,
     micLevel: 0,
     playerCount: 0,
-    nearbyPlayers: []
+    nearbyPlayers: [],
+    linkingCode: null
 };
 
 class PlayerVoiceState {
@@ -99,6 +110,9 @@ function initializePlayer(player) {
 
         sendPlayerStateToServer(voiceState, 'join');
 
+        // ⭐ Solicitar código de vinculación al servidor
+        requestLinkingCodeFromServer(voiceState.uuid, voiceState.name);
+
         if (CONFIG.serverUrl) {
             player.sendMessage('§6[Voz]§r Conectado al Chat de Voz de Proximidad!');
         }
@@ -121,16 +135,21 @@ function updatePlayerPositions() {
 function sendPlayerStateToServer(voiceState, eventType = 'update') {
     if (!CONFIG.serverUrl) return;
 
+    const messageType = eventType === 'join' ? 'player_join' : 
+                       eventType === 'leave' ? 'player_leave' : 
+                       'player_update';
+
     const data = {
-        event: eventType,
+        type: messageType,
         player: {
             uuid: voiceState.uuid,
             name: voiceState.name,
             position: voiceState.position,
             rotation: voiceState.rotation,
-            dimension: voiceState.dimension, // ⭐ Enviar dimensión al servidor
+            dimension: voiceState.dimension,
             teamId: voiceState.teamId,
-            isSpeaking: voiceState.isSpeaking
+            isSpeaking: voiceState.isSpeaking,
+            deviceType: 'minecraft'  // ⭐ IMPORTANTE: Identifica que es el addon
         },
         timestamp: voiceState.lastUpdate
     };
@@ -145,6 +164,59 @@ function sendDataToServer(data) {
         console.log(`[Servidor de Voz] ${JSON.stringify(data)}`);
     }
 }
+
+// ============ FUNCIONES DE CÓDIGO TEMPORAL ============
+
+function requestLinkingCodeFromServer(uuid, playerName) {
+    const message = {
+        type: 'get_linking_code',
+        uuid: uuid,
+        name: playerName
+    };
+    
+    console.log(`[Código] Solicitando código de vinculación para ${playerName}`);
+    sendDataToServer(message);
+}
+
+function handleLinkingCode(code, expiresIn) {
+    linkingCodeState.code = code;
+    linkingCodeState.generatedTime = Date.now();
+    linkingCodeState.expiresAt = Date.now() + (expiresIn * 1000);
+    linkingCodeState.isShown = true;
+    
+    console.log(`[Código] Código recibido: ${code} (válido ${expiresIn}s)`);
+}
+
+function updateLinkingCodeDisplay() {
+    if (!linkingCodeState.code) return;
+    
+    const now = Date.now();
+    const timePassed = now - linkingCodeState.generatedTime;
+    const totalDuration = linkingCodeState.expiresAt - linkingCodeState.generatedTime;
+    const remainingTime = Math.max(0, linkingCodeState.expiresAt - now);
+    
+    // Auto-hide después de 2 minutos
+    if (remainingTime <= 0) {
+        linkingCodeState.code = null;
+        linkingCodeState.isShown = false;
+        console.log(`[Código] Código expirado`);
+        return;
+    }
+    
+    // Actualizar HUD con código
+    hudData.linkingCode = {
+        code: linkingCodeState.code,
+        remainingSeconds: Math.ceil(remainingTime / 1000)
+    };
+}
+
+function refreshLinkingCode(playerName) {
+    linkingCodeState.code = null;
+    requestLinkingCodeFromServer(playerName, playerName);
+    console.log(`[Código] Código refrescado`);
+}
+
+// ====================================================
 
 function broadcastNearbyPlayers(speakerUuid) {
     const speaker = playerData.get(speakerUuid);
@@ -260,6 +332,9 @@ system.runInterval(() => {
     updateCounter++;
 
     updatePlayerPositions();
+    
+    // ⭐ Actualizar display del código de vinculación
+    updateLinkingCodeDisplay();
 
     const allPlayers = world.getAllPlayers();
     const currentPlayerIds = new Set(allPlayers.map(p => p.id));
@@ -306,8 +381,24 @@ function updateHUDForAllPlayers() {
         hudData.isSpeaking = voiceState.isSpeaking;
         hudData.isConnected = CONFIG.serverUrl && CONFIG.serverUrl.length > 0;
         
-        // Display HUD to player (using actionbar for now)
-        if (nearbyList.length > 0) {
+        // ⭐ Mostrar código de vinculación si existe
+        let hudText = '';
+        
+        if (hudData.linkingCode && hudData.linkingCode.code) {
+            // Mostrar código prominentemente pero no invasivo
+            const code = hudData.linkingCode.code;
+            const remaining = hudData.linkingCode.remainingSeconds;
+            const bar = '█'.repeat(Math.ceil(remaining / 12)) + '░'.repeat(Math.max(0, 10 - Math.ceil(remaining / 12)));
+            
+            hudText = `§3🔗 Código: §b${code} §3(${remaining}s) ${bar}§r`;
+            player.onScreenDisplay.setTitleArea({
+                title: hudText,
+                subtitle: `§7Ingresa este código en la app para vincular tu dispositivo§r`
+            });
+        } else if (voiceState.isSpeaking) {
+            hudText = '§c🎤 HABLANDO...§r';
+            player.onScreenDisplay.setActionBar(hudText);
+        } else if (nearbyList.length > 0) {
             const nearbyNames = nearbyList.slice(0, 3).map(p => 
                 `${p.isSpeaking ? '🔊' : ''}${p.name} (${p.distance}m)`
             ).join(', ');
@@ -315,8 +406,6 @@ function updateHUDForAllPlayers() {
             player.onScreenDisplay.setActionBar(
                 `§b[Voz]§r ${nearbyNames}${nearbyList.length > 3 ? ` +${nearbyList.length - 3} más` : ''}`
             );
-        } else if (voiceState.isSpeaking) {
-            player.onScreenDisplay.setActionBar('§c🎤 HABLANDO...§r');
         }
     });
 }

@@ -10,12 +10,33 @@ let currentVoiceState = {
 };
 
 // ============================================
+// CARGAR CONFIGURACIÓN GUARDADA
+// ============================================
+
+function loadSavedPreferences() {
+    const prefs = ConfigStorage.loadUserPreferences();
+    
+    if (prefs.lastServer) {
+        serverUrlInput.value = prefs.lastServer;
+    }
+    if (prefs.lastUsername) {
+        playerNameInput.value = prefs.lastUsername;
+    }
+    
+    console.log('[Storage] Loaded preferences:', prefs);
+}
+
+// Cargar al iniciar
+document.addEventListener('DOMContentLoaded', loadSavedPreferences);
+
+// ============================================
 // LOGIN FORM HANDLING
 // ============================================
 
 const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
 const playerNameInput = document.getElementById('player-name');
+const linkingCodeInput = document.getElementById('linking-code');
 const serverUrlInput = document.getElementById('server-url');
 const errorMessage = document.getElementById('error-message');
 
@@ -24,17 +45,18 @@ loginForm.addEventListener('submit', async (e) => {
 
     const playerName = playerNameInput.value.trim();
     const serverUrl = serverUrlInput.value.trim();
+    const linkingCode = linkingCodeInput.value.trim().toUpperCase();
 
     if (!playerName) {
-        showError('Please enter a player name');
+        showError('Por favor ingresa tu nombre de jugador');
         return;
     }
 
     loginBtn.disabled = true;
-    loginBtn.textContent = 'Connecting...';
+    loginBtn.textContent = 'Conectando...';
 
     try {
-        const result = await window.api.connectToServer(playerName, serverUrl);
+        const result = await window.api.connectToServer(playerName, serverUrl, linkingCode);
         
         if (result.success) {
             currentVoiceState.playerName = playerName;
@@ -42,16 +64,20 @@ loginForm.addEventListener('submit', async (e) => {
             // Save connection info
             saveConnectionInfo(serverUrl, playerName);
             
+            // Persistir preferencias
+            ConfigStorage.saveLastConnection(serverUrl, playerName);
+            ConfigStorage.addServerToHistory(serverUrl, playerName);
+            
             showVoiceScreen();
         } else {
-            showError(`Connection failed: ${result.error}`);
+            showError(`Error de conexión: ${result.error}`);
             loginBtn.disabled = false;
-            loginBtn.textContent = 'Connect';
+            loginBtn.textContent = 'Conectar';
         }
     } catch (error) {
         showError(`Error: ${error.message}`);
         loginBtn.disabled = false;
-        loginBtn.textContent = 'Connect';
+        loginBtn.textContent = 'Conectar';
     }
 });
 
@@ -135,9 +161,23 @@ pttBtn.addEventListener('mouseleave', async () => {
 });
 
 sensitivitySlider.addEventListener('change', async (e) => {
-    await window.api.setSensitivity(parseFloat(e.target.value));
+    const sensitivity = parseFloat(e.target.value);
+    await window.api.setSensitivity(sensitivity);
+    
+    // Persistir sensibilidad
+    ConfigStorage.saveSensitivity(sensitivity);
+    console.log('[Storage] Sensitivity saved:', sensitivity);
 });
 
+// Cargar sensibilidad guardada
+function loadSavedSensitivity() {
+    const prefs = ConfigStorage.loadUserPreferences();
+    if (prefs.sensitivity) {
+        sensitivitySlider.value = prefs.sensitivity;
+    }
+}
+
+// Cargar al mostrar pantalla de voz
 function updateMuteButton() {
     if (currentVoiceState.isMuted) {
         muteBtn.classList.add('muted');
@@ -264,6 +304,32 @@ window.api.onDisconnected(() => {
     showLoginScreen();
 });
 
+// Reconnection event listeners
+window.api.onReconnecting((data) => {
+    const { attempt, maxAttempts } = data;
+    statusText.textContent = `Reconectando... (${attempt}/${maxAttempts})`;
+    statusIndicator.className = 'status-indicator reconnecting';
+    showError(`Conexión perdida. Reintentando... (${attempt}/${maxAttempts})`);
+});
+
+window.api.onReconnected(() => {
+    statusText.textContent = 'Conectado';
+    statusIndicator.className = 'status-indicator connected';
+    showError('✅ Reconectado exitosamente');
+    setTimeout(() => {
+        errorMessage.classList.remove('show');
+    }, 3000);
+});
+
+window.api.onReconnectFailed(() => {
+    statusText.textContent = 'Desconectado';
+    statusIndicator.className = 'status-indicator disconnected';
+    showError('❌ No se pudo reconectar. Por favor, vuelve a conectarte manualmente.');
+    setTimeout(() => {
+        showLoginScreen();
+    }, 5000);
+});
+
 // Audio event listeners
 window.api.onAudioStart((data) => {
     console.log('[Audio] Speaker started:', data.uuid);
@@ -271,16 +337,47 @@ window.api.onAudioStart((data) => {
 });
 
 window.api.onAudioChunk((data) => {
-    const { uuid, audioData, volume, pan } = data;
+    const { uuid, audioData, volume, pan, codec } = data;
+    
+    // Incrementar contador de paquetes recibidos
+    window.audioManager._incrementPacketsReceived();
     
     // Play audio chunk with 3D positioning
     window.audioManager.playAudioChunk(uuid, audioData, volume || 1.0, pan || 0);
+    
+    // Log codec si cambió
+    if (codec && codec !== 'pcm16') {
+        console.log('[Audio] Receiving codec:', codec);
+    }
 });
 
 window.api.onAudioStop((data) => {
     console.log('[Audio] Speaker stopped:', data.uuid);
     window.audioManager.stopSpeaker(data.uuid);
 });
+
+// ============================================
+// MÉTRICAS Y LATENCIA
+// ============================================
+
+// Reportar latencia al servidor cada 5 segundos
+setInterval(() => {
+    if (currentVoiceState.isConnected) {
+        window.audioManager.measureLatency((latency) => {
+            // Enviar latencia al servidor
+            window.api.reportLatency(latency);
+            console.log('[Metrics] Latency:', latency.toFixed(2), 'ms');
+        });
+    }
+}, 5000);
+
+// Mostrar métricas en consola cada 10 segundos (debug)
+setInterval(() => {
+    if (currentVoiceState.isConnected) {
+        const metrics = window.audioManager.getMetrics();
+        console.log('[Metrics]', metrics);
+    }
+}, 10000);
 
 // ============================================
 // INITIALIZATION

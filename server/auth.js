@@ -245,7 +245,7 @@ class AuthenticationManager {
     // Statistics
     getStats() {
         return {
-            activeTok ens: this.tokens.size,
+            activeTokens: this.tokens.size,
             activeSessions: this.sessions.size,
             whitelistSize: this.whitelist.size,
             blacklistSize: this.blacklist.size,
