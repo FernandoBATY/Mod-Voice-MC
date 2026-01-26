@@ -36,7 +36,7 @@
         <!-- Foreground Service para background mode -->
         <service
             android:name="com.example.proximity_voice_chat.BackgroundService"
-            android:foreground="true"
+            android:foregroundServiceType="microphone"
             android:enabled="true"
             android:exported="false" />
         

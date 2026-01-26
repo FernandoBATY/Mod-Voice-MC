@@ -422,10 +422,11 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
   Future<void> _initBackgroundMode() async {
     try {
       // Configurar background mode para Android
-      final androidConfig = AndroidConfig(
-        onStart: onStart,
-        autoStart: true,
-        isForeground: true,
+      final androidConfig = FlutterBackgroundAndroidConfig(
+        notificationTitle: "Chat de Voz de Proximidad",
+        notificationText: "La app está ejecutándose en segundo plano",
+        notificationImportance: AndroidNotificationImportance.normal,
+        notificationIcon: AndroidResource(name: 'app_icon', defType: 'drawable'),
       );
 
       _backgroundModeEnabled = await FlutterBackground.initialize(androidConfig: androidConfig);
@@ -564,7 +565,7 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     }
   }
 
-  void _handleMessage(dynamic data) {
+  void _handleMessage(dynamic data) async {
     try {
       final message = jsonDecode(data);
       final type = message['type'];
@@ -759,15 +760,20 @@ class _VoiceChatScreenState extends State<VoiceChatScreen> {
     });
 
     try {
+      // Configurar el stream controller para manejar el audio
+      final streamController = StreamController<Uint8List>();
+      
+      streamController.stream.listen((buffer) {
+        // Enviar chunks de audio al servidor
+        _channel?.sink.add(jsonEncode({
+          'type': 'audio_chunk',
+          'player': {'uuid': _uuid},
+          'audioData': base64Encode(buffer),
+        }));
+      });
+      
       await _recorder!.startRecorder(
-        toStream: (buffer) {
-          // Enviar chunks de audio al servidor
-          _channel?.sink.add(jsonEncode({
-            'type': 'audio_chunk',
-            'player': {'uuid': _uuid},
-            'audioData': base64Encode(buffer),
-          }));
-        },
+        toStream: streamController.sink,
         codec: Codec.opusOGG, // Usar Opus en lugar de PCM16
         sampleRate: 16000,
         numChannels: 1,
