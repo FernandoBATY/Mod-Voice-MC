@@ -36,6 +36,9 @@ contextBridge.exposeInMainWorld('api', {
     onPlayerEvent: (callback) =>
         ipcRenderer.on('player-event', (event, data) => callback(data)),
     
+    onNearbyPlayers: (callback) =>
+        ipcRenderer.on('nearby-players', (event, data) => callback(data)),
+    
     onConnectionError: (callback) =>
         ipcRenderer.on('connection-error', (event, error) => callback(error)),
     

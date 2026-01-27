@@ -51,7 +51,10 @@ app.use(express.json());
 
 const httpServer = http.createServer(app);
 
-const wss = new WebSocket.Server({ port: config.wsPort });
+const wss = new WebSocket.Server({ 
+    port: config.wsPort,
+    host: '0.0.0.0' // Escuchar en todas las interfaces de red
+});
 
 // ============================================
 // INICIALIZAR SISTEMAS DE OPTIMIZACIÓN
@@ -248,6 +251,12 @@ class PlayerSession {
 
         // Actualizar spatial grid
         spatialGrid.updatePlayer(this);
+    }
+
+    // Actualizar rotación
+    updateRotation(pitch, yaw) {
+        this.rotation = { pitch, yaw };
+        this.lastHeartbeat = Date.now();
     }
 
     getDistanceTo(otherPlayer) {
@@ -532,9 +541,23 @@ function broadcastPlayerUpdate(uuid) {
         }
     };
 
+    // Enviar a TODOS los jugadores, incluyendo otros dispositivos del mismo jugador
     getAllPlayers().forEach(otherPlayer => {
+        // Enviar a todos MENOS el dispositivo de Minecraft que generó la actualización
         if (otherPlayer.uuid !== uuid) {
             otherPlayer.send(message);
+        } else {
+            // Si es el mismo jugador, enviar a los dispositivos que NO son Minecraft
+            // (para que la app reciba la posición del addon)
+            player.devices.forEach((device, deviceId) => {
+                if (device.type !== 'minecraft' && device.ws && device.ws.readyState === WebSocket.OPEN) {
+                    try {
+                        device.ws.send(JSON.stringify(message));
+                    } catch (error) {
+                        console.error(`Error enviando actualización a dispositivo ${deviceId}:`, error.message);
+                    }
+                }
+            });
         }
     });
 }
@@ -569,7 +592,12 @@ wss.on('connection', (ws, req) => {
 });
 
 function handleMessage(ws, message, ipAddress, setPlayer) {
-    const { type, player: playerData, audioData, volume } = message;
+    const { type } = message;
+    
+    // Extraer playerData dependiendo del tipo de mensaje
+    let playerData = message.player || message;
+    const audioData = message.audioData;
+    const volume = message.volume;
 
     // Rate limiting check
     const uuid = playerData?.uuid || message.uuid;
@@ -588,7 +616,7 @@ function handleMessage(ws, message, ipAddress, setPlayer) {
 
     switch (type) {
         case 'player_join':
-            handlePlayerJoin(ws, playerData, ipAddress, setPlayer);
+            handlePlayerJoin(ws, message, ipAddress, setPlayer);
             break;
 
         case 'get_linking_code':
@@ -653,39 +681,52 @@ function handleMessage(ws, message, ipAddress, setPlayer) {
 function handlePlayerJoin(ws, playerData, ipAddress, setPlayer) {
     const { uuid, name, version, deviceType = 'unknown', linkingCode = null } = playerData;
 
+    logger.info(`Nueva conexión intento: ${name} (${deviceType}) ${linkingCode ? 'con código' : 'sin código'}`);
+
     // Verificar si el jugador ya existe (otro dispositivo)
     let player = getPlayer(uuid);
     
     if (!player) {
-        // Nuevo jugador - generar código de vinculación para futuras conexiones
-        player = addPlayer(uuid, name, ws, ipAddress);
-        const linkingCode = player.generateLinkingCode();
-        console.log(`[Linking] Nuevo jugador ${name} - código: ${linkingCode}`);
-    } else {
-        // Jugador existente se está conectando con otro dispositivo
-        console.log(`[Multi-Device] ${name} se conectó con dispositivo: ${deviceType}`);
-        
-        // Si es un dispositivo diferente al primero, requerir código de vinculación
-        if (deviceType !== 'minecraft' && !player.minecraftDevice && !linkingCode) {
-            // Esperar código temporal
+        // Si es Minecraft, crear jugador nuevo
+        if (deviceType === 'minecraft') {
+            player = addPlayer(uuid, name, ws, ipAddress);
+            const code = player.generateLinkingCode();
+            logger.info(`[Nuevo] Jugador ${name} creado - código: ${code}`);
+        } else {
+            // Si es app móvil y no existe el jugador, rechazar
             ws.send(JSON.stringify({
-                type: 'linking_required',
-                message: 'Se requiere código de vinculación',
-                requireCode: true
+                type: 'join_confirm',
+                success: false,
+                error: 'Primero debes entrar al mundo de Minecraft'
             }));
+            logger.warn(`[Rechazado] ${name} intentó conectar sin estar en Minecraft`);
             return;
         }
-
-        // Validar código si se proporcionó
-        if (linkingCode) {
+    } else {
+        // Jugador existente se está conectando con otro dispositivo
+        logger.info(`[Multi-Device] ${name} conectando con ${deviceType}`);
+        
+        // Si es un dispositivo diferente a Minecraft, requerir código
+        if (deviceType !== 'minecraft' && linkingCode) {
             const validation = player.validateLinkingCode(linkingCode, deviceType);
             if (!validation.success) {
                 ws.send(JSON.stringify({
-                    type: 'linking_failed',
+                    type: 'join_confirm',
+                    success: false,
                     error: validation.error
                 }));
+                logger.error(`[Código Inválido] ${name}: ${validation.error}`);
                 return;
             }
+            logger.info(`✅ [Código Válido] ${name} vinculado correctamente`);
+        } else if (deviceType !== 'minecraft' && !linkingCode) {
+            ws.send(JSON.stringify({
+                type: 'join_confirm',
+                success: false,
+                error: 'Se requiere código de vinculación'
+            }));
+            logger.warn(`[Sin Código] ${name} no proporcionó código`);
+            return;
         }
     }
 
@@ -809,8 +850,32 @@ function handlePlayerUpdate(playerData) {
             );
         }
         
-        player.updateRotation(playerData.rotation?.pitch || 0, playerData.rotation?.yaw || 0);
+        if (playerData.rotation) {
+            player.updateRotation(playerData.rotation.pitch || 0, playerData.rotation.yaw || 0);
+        }
         player.teamId = playerData.teamId || null;
+
+        // ⭐ Enviar información de jugadores cercanos a este jugador
+        const nearbyPlayers = getNearbyPlayers(player, true);
+        
+        // Enviar a todos los dispositivos del jugador
+        player.devices.forEach((device, deviceId) => {
+            if (device.ws && device.ws.readyState === WebSocket.OPEN) {
+                try {
+                    device.ws.send(JSON.stringify({
+                        type: 'nearby_players',
+                        nearbyPlayers: nearbyPlayers.map(np => ({
+                            uuid: np.uuid,
+                            name: np.name,
+                            distance: np.distance,
+                            volume: np.volume
+                        }))
+                    }));
+                } catch (error) {
+                    console.error(`Error enviando nearby_players a ${deviceId}:`, error.message);
+                }
+            }
+        });
 
         broadcastPlayerUpdate(playerData.uuid);
     }
@@ -1058,20 +1123,25 @@ function getLocalIP() {
     return 'localhost';
 }
 
-httpServer.listen(config.httpPort, () => {
-    console.log(`\n${'='.repeat(50)}`);
+wss.on('listening', () => {
+    const localIP = getLocalIP();
+    console.log('\n✅ Servidor WebSocket escuchando en TODAS las interfaces\n');
+    console.log(`${'='.repeat(50)}`);
     console.log('SERVIDOR DE CHAT DE VOZ DE PROXIMIDAD');
     console.log(`${'='.repeat(50)}`);
     console.log(`Servidor HTTP corriendo en http://localhost:${config.httpPort}`);
-    console.log(`Servidor WebSocket corriendo en ws://localhost:${config.wsPort}`);
-    console.log(`IP Local: ${getLocalIP()}`);
-    console.log(`Max Jugadores: ${config.maxPlayers}`);
+    console.log(`Servidor WebSocket corriendo en ws://0.0.0.0:${config.wsPort}`);
+    console.log(`IP Local (WiFi): ${localIP}`);
+    console.log(`\n📱 En la app móvil, usa:`);
+    console.log(`   ws://${localIP}:${config.wsPort}`);
+    console.log(`\nMax Jugadores: ${config.maxPlayers}`);
     console.log(`Rango de Proximidad: ${config.proximityRange} bloques`);
-    console.log(`${'='.repeat(50)}\n`);
+    console.log(`${'='.repeat(50)}`);
+    console.log('\n🟢 Servidor listo para aceptar conexiones...\n');
 });
 
-wss.on('listening', () => {
-    console.log('Servidor WebSocket escuchando');
+httpServer.listen(config.httpPort, '0.0.0.0', () => {
+    logger.info(`HTTP Server listening on port ${config.httpPort}`);
 });
 
 process.on('SIGINT', () => {

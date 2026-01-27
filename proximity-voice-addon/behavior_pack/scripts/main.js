@@ -110,12 +110,18 @@ function initializePlayer(player) {
 
         sendPlayerStateToServer(voiceState, 'join');
 
-        // ⭐ Solicitar código de vinculación al servidor
-        requestLinkingCodeFromServer(voiceState.uuid, voiceState.name);
+        // ⭐ Generar código de vinculación
+        const code = requestLinkingCodeFromServer(voiceState.uuid, voiceState.name);
 
-        if (CONFIG.serverUrl) {
-            player.sendMessage('§6[Voz]§r Conectado al Chat de Voz de Proximidad!');
-        }
+        // Mostrar código al jugador
+        player.sendMessage('§6╔═══════════════════════════════════╗§r');
+        player.sendMessage('§6║  §bChat de Voz de Proximidad  §6║§r');
+        player.sendMessage('§6╠═══════════════════════════════════╣§r');
+        player.sendMessage('§6║  §3🔗 Tu código de vinculación:  §6║§r');
+        player.sendMessage(`§6║      §b§l${code}§r                     §6║§r`);
+        player.sendMessage('§6║  §7(Válido por 10 minutos)       §6║§r');
+        player.sendMessage('§6╚═══════════════════════════════════╝§r');
+        player.sendMessage('§7Ingresa este código en la app móvil§r');
     }
 }
 
@@ -151,6 +157,13 @@ function sendPlayerStateToServer(voiceState, eventType = 'update') {
             isSpeaking: voiceState.isSpeaking,
             deviceType: 'minecraft'  // ⭐ IMPORTANTE: Identifica que es el addon
         },
+        // También enviar en el nivel superior para compatibilidad
+        uuid: voiceState.uuid,
+        name: voiceState.name,
+        position: voiceState.position,
+        rotation: voiceState.rotation,
+        dimension: voiceState.dimension,
+        deviceType: 'minecraft',
         timestamp: voiceState.lastUpdate
     };
 
@@ -167,15 +180,35 @@ function sendDataToServer(data) {
 
 // ============ FUNCIONES DE CÓDIGO TEMPORAL ============
 
+function generateLinkingCode() {
+    // Generar código de 4 dígitos aleatorio
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    return code;
+}
+
 function requestLinkingCodeFromServer(uuid, playerName) {
-    const message = {
-        type: 'get_linking_code',
-        uuid: uuid,
-        name: playerName
-    };
+    // Generar código localmente
+    const code = generateLinkingCode();
+    const expiresIn = 600; // 10 minutos
     
-    console.log(`[Código] Solicitando código de vinculación para ${playerName}`);
+    linkingCodeState.code = code;
+    linkingCodeState.generatedTime = Date.now();
+    linkingCodeState.expiresAt = Date.now() + (expiresIn * 1000);
+    linkingCodeState.isShown = true;
+    
+    console.log(`[Código] Código generado: ${code} para ${playerName} (válido ${expiresIn}s)`);
+    
+    // Notificar al servidor sobre el código generado
+    const message = {
+        type: 'linking_code_generated',
+        uuid: uuid,
+        name: playerName,
+        code: code,
+        expiresIn: expiresIn
+    };
     sendDataToServer(message);
+    
+    return code;
 }
 
 function handleLinkingCode(code, expiresIn) {
@@ -262,7 +295,6 @@ function stopPlayerVoice(playerUuid) {
 
 function notifyNearbyPlayers(speaker, nearbyPlayers, eventType) {
     try {
-        const world = world.getDimension('overworld');
         const messageText = eventType === 'speaking'
             ? `§a[Voz]§r ${speaker.name} esta hablando cerca (${nearbyPlayers.length} pueden escuchar)`
             : `§c[Voz]§r ${speaker.name} dejo de hablar`;
@@ -285,6 +317,37 @@ function registerCommands() {
         const player = event.sender;
         const message = event.message.toLowerCase();
 
+        // Comando para ver el código actual
+        if (message === '!codigo' || message === '!code') {
+            event.cancel = true;
+            if (linkingCodeState.code) {
+                const remaining = Math.ceil((linkingCodeState.expiresAt - Date.now()) / 1000);
+                player.sendMessage('§6╔═══════════════════════════════════╗§r');
+                player.sendMessage('§6║  §3🔗 Tu código de vinculación:  §6║§r');
+                player.sendMessage(`§6║      §b§l${linkingCodeState.code}§r                     §6║§r`);
+                player.sendMessage(`§6║  §7(Expira en ${remaining}s)          §6║§r`);
+                player.sendMessage('§6╚═══════════════════════════════════╝§r');
+            } else {
+                player.sendMessage('§c[Voz]§r No hay código activo. Usa §b!nuevoCodigo§r para generar uno nuevo.');
+            }
+        }
+
+        // Comando para generar nuevo código
+        if (message === '!nuevocodigo' || message === '!newcode') {
+            event.cancel = true;
+            const voiceState = playerData.get(player.id);
+            if (voiceState) {
+                const code = requestLinkingCodeFromServer(voiceState.uuid, voiceState.name);
+                player.sendMessage('§6╔═══════════════════════════════════╗§r');
+                player.sendMessage('§6║  §anuevo código generado!       §6║§r');
+                player.sendMessage('§6╠═══════════════════════════════════╣§r');
+                player.sendMessage('§6║  §3🔗 Tu código de vinculación:  §6║§r');
+                player.sendMessage(`§6║      §b§l${code}§r                     §6║§r`);
+                player.sendMessage('§6║  §7(Válido por 10 minutos)       §6║§r');
+                player.sendMessage('§6╚═══════════════════════════════════╝§r');
+            }
+        }
+
         if (message === '!voice') {
             event.cancel = true;
             const voiceState = playerData.get(player.id);
@@ -294,7 +357,13 @@ function registerCommands() {
                     `§aEstado: §r${voiceState.isSpeaking ? 'Hablando' : 'Silencio'}`,
                     `§aRango: §r${CONFIG.proximityRange} bloques`,
                     `§aEquipo: §r${voiceState.teamId || 'Ninguno'}`,
-                    `§aComandos: !voice !voice-range !voice-team`
+                    `§aCódigo: §r${linkingCodeState.code || 'Ninguno'}`,
+                    '',
+                    '§bComandos disponibles:§r',
+                    '  §3!codigo§r - Ver código actual',
+                    '  §3!nuevoCodigo§r - Generar nuevo código',
+                    '  §3!voice§r - Ver estado',
+                    '  §3!voice-range <número>§r - Cambiar rango'
                 ].join('\n'));
             }
         }
@@ -342,6 +411,11 @@ system.runInterval(() => {
     playerData.forEach((voiceState, uuid) => {
         if (!currentPlayerIds.has(uuid)) {
             removePlayer(uuid);
+        } else {
+            // ⭐ Enviar actualización de posición cada 10 ticks (500ms)
+            if (updateCounter % 5 === 0) {
+                sendPlayerStateToServer(voiceState, 'update');
+            }
         }
     });
 
@@ -391,8 +465,10 @@ function updateHUDForAllPlayers() {
             const bar = '█'.repeat(Math.ceil(remaining / 12)) + '░'.repeat(Math.max(0, 10 - Math.ceil(remaining / 12)));
             
             hudText = `§3🔗 Código: §b${code} §3(${remaining}s) ${bar}§r`;
-            player.onScreenDisplay.setTitleArea({
-                title: hudText,
+            player.onScreenDisplay.setTitle(hudText, {
+                stayDuration: 40,
+                fadeInDuration: 5,
+                fadeOutDuration: 5,
                 subtitle: `§7Ingresa este código en la app para vincular tu dispositivo§r`
             });
         } else if (voiceState.isSpeaking) {

@@ -280,23 +280,65 @@ window.api.onPlayerEvent((data) => {
 window.api.onPlayerUpdate((data) => {
     // Update player position/volume
     const { player } = data;
+    
+    if (!player) return;
+    
     const existingPlayer = currentVoiceState.nearbyPlayers.find(
-        p => p.name === player.name
+        p => p.uuid === player.uuid || p.name === player.name
     );
     
     if (existingPlayer) {
-        existingPlayer.distance = Math.sqrt(
-            player.position.x ** 2 +
-            player.position.y ** 2 +
-            player.position.z ** 2
-        );
+        // Actualizar jugador existente
+        existingPlayer.position = player.position;
+        existingPlayer.isSpeaking = player.isSpeaking;
+        
+        // Si el jugador tiene posición, calcular distancia (la app NO tiene posición propia)
+        // La distancia la debe calcular el servidor
+        if (player.distance !== undefined) {
+            existingPlayer.distance = player.distance;
+        }
+        if (player.volume !== undefined) {
+            existingPlayer.volume = player.volume;
+        }
+    } else {
+        // Agregar nuevo jugador cercano
+        currentVoiceState.nearbyPlayers.push({
+            uuid: player.uuid,
+            name: player.name,
+            position: player.position,
+            distance: player.distance || 0,
+            volume: player.volume || 0.5,
+            isSpeaking: player.isSpeaking || false
+        });
     }
+    
+    // Actualizar UI
+    updatePlayersList();
 });
 
 window.api.onConnectionError((error) => {
     showError(`Connection error: ${error}`);
     updateConnectionStatus(false);
     window.notifications.connectionError(error);
+});
+
+// Handler para lista de jugadores cercanos actualizada
+window.api.onNearbyPlayers((data) => {
+    const { nearbyPlayers } = data;
+    
+    if (!nearbyPlayers) return;
+    
+    // Actualizar lista completa de jugadores cercanos
+    currentVoiceState.nearbyPlayers = nearbyPlayers.map(np => ({
+        uuid: np.uuid,
+        name: np.name,
+        distance: np.distance || 0,
+        volume: np.volume || 0.5,
+        isSpeaking: np.isSpeaking || false
+    }));
+    
+    // Actualizar UI
+    updatePlayersList();
 });
 
 window.api.onDisconnected(() => {

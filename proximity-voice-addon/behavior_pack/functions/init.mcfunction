@@ -2,7 +2,7 @@
 # Run this on server startup
 
 # Enable experimental features if needed
-execute at @s run say [Voice Chat] Initializing Proximity Voice Chat System...
+say [Voice Chat] Initializing Proximity Voice Chat System...
 
 # Setup scoreboard for voice state tracking
 scoreboard objectives add voice_speaking dummy "Speaking Status"

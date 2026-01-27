@@ -201,6 +201,10 @@ function handleServerMessage(message) {
             mainWindow?.webContents.send('player-update', message);
             break;
 
+        case 'nearby_players':
+            mainWindow?.webContents.send('nearby-players', message);
+            break;
+
         case 'player_event':
             if (message.event === 'player_join') {
                 voiceState.nearbyPlayers.push(message.data);
@@ -261,7 +265,11 @@ ipcMain.handle('start-speaking', async (event) => {
     if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
         wsConnection.send(JSON.stringify({
             type: 'audio_start',
-            player: { uuid: generateUUID(voiceState.playerName) }
+            player: { 
+                uuid: generateUUID(voiceState.playerName),
+                name: voiceState.playerName
+            },
+            uuid: generateUUID(voiceState.playerName)
         }));
     }
 
@@ -274,7 +282,10 @@ ipcMain.handle('stop-speaking', async (event) => {
     if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
         wsConnection.send(JSON.stringify({
             type: 'audio_stop',
-            player: { uuid: generateUUID(voiceState.playerName) }
+            player: { 
+                uuid: generateUUID(voiceState.playerName)
+            },
+            uuid: generateUUID(voiceState.playerName)
         }));
     }
 
