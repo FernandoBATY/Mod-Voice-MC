@@ -1,3 +1,13 @@
+// Mostrar y reenviar coordenadas del addon
+window.api.onAddonCoords((coords) => {
+    // Mostrar en la UI
+    const el = document.getElementById('addon-coords-display');
+    if (el) {
+        el.textContent = JSON.stringify(coords, null, 2);
+    }
+    // Reenviar al servidor
+    window.api.forwardAddonCoords(coords);
+});
 // Renderer process - UI logic with WebRTC Audio
 let currentVoiceState = {
     isConnected: false,

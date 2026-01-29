@@ -3,6 +3,8 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const WebSocket = require('ws');
+const { startHttpReceiver, COORDS_PATH } = require('./httpReceiver');
+const { startCoordsTcpServer } = require('./coordsTcpServer');
 
 let mainWindow;
 let wsConnection = null;
@@ -44,7 +46,18 @@ function createWindow() {
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
+
+    // Iniciar HTTP POST receiver para el addon
+    startHttpReceiver(mainWindow, 3000);
+    // Iniciar servidor TCP para coords.json
+    startCoordsTcpServer(25565);
 }
+// Reenviar coordenadas recibidas del addon al servidor WebSocket
+ipcMain.on('forward-addon-coords', (event, coords) => {
+    if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify(coords));
+    }
+});
 
 // ============================================
 // WEBSOCKET CONNECTION

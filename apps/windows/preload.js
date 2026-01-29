@@ -1,3 +1,10 @@
+    // Recibir coordenadas del addon
+    onAddonCoords: (callback) =>
+        ipcRenderer.on('addon-coords', (event, data) => callback(data)),
+
+    // Reenviar coordenadas al servidor
+    forwardAddonCoords: (coords) =>
+        ipcRenderer.send('forward-addon-coords', coords),
 // Preload script for Electron - security context
 const { contextBridge, ipcRenderer } = require('electron');
 

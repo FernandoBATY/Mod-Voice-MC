@@ -1,3 +1,5 @@
+// Mostrar coordenadas en el chat de forma no invasiva (solo para el jugador)
+let chatCoordsCounter = 0;
 import { world, system, Player } from '@minecraft/server';
 
 const CONFIG = {
@@ -7,7 +9,7 @@ const CONFIG = {
     volumeFalloff: 1.5,
     teamChatEnabled: true,
     globalChatEnabled: false,
-    updateInterval: 100,
+    updateInterval: 200,
     serverUrl: 'ws://localhost:8080'
 };
 
@@ -399,6 +401,7 @@ let updateCounter = 0;
 
 system.runInterval(() => {
     updateCounter++;
+    chatCoordsCounter++;
 
     updatePlayerPositions();
     
@@ -412,9 +415,14 @@ system.runInterval(() => {
         if (!currentPlayerIds.has(uuid)) {
             removePlayer(uuid);
         } else {
-            // ⭐ Enviar actualización de posición cada 10 ticks (500ms)
-            if (updateCounter % 5 === 0) {
-                sendPlayerStateToServer(voiceState, 'update');
+            // ⭐ Enviar actualización de posición cada tick (200ms)
+            sendPlayerStateToServer(voiceState, 'update');
+
+            // Mostrar coordenadas en el chat cada 2 segundos (10 intervalos de 200ms)
+            if (chatCoordsCounter % 10 === 0) {
+                try {
+                    voiceState.player.sendMessage(`§7[Coords] X:${voiceState.position.x.toFixed(1)} Y:${voiceState.position.y.toFixed(1)} Z:${voiceState.position.z.toFixed(1)}`);
+                } catch (e) {}
             }
         }
     });
@@ -425,6 +433,9 @@ system.runInterval(() => {
     
     // Update HUD data for all players
     updateHUDForAllPlayers();
+    
+    // Reset chatCoordsCounter cada 10 intervalos
+    if (chatCoordsCounter >= 10) chatCoordsCounter = 0;
 }, CONFIG.updateInterval);
 
 function updateHUDForAllPlayers() {
