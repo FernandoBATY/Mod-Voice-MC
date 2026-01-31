@@ -1,0 +1,8 @@
+{
+  "serverPort": 19132,
+  "queryPort": 19133,
+  "maxPlayers": 20,
+  "motd": "Servidor Proximidad Voz",
+  "tickIntervalMs": 200,
+  "exposeApiPort": 3001
+}
